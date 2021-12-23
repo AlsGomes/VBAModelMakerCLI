@@ -10,7 +10,7 @@ import br.com.als.vba.util.VBALangUtils;
 public class VBAClass {
 
 	private String name;
-	private List<VBAAttributes> attributes = new ArrayList<>();
+	private List<VBAAttribute> attributes = new ArrayList<>();
 	private Map<String, String> statements = new HashMap<>();
 
 	public VBAClass() {
@@ -28,13 +28,13 @@ public class VBAClass {
 		this.name = name;
 	}
 
-	public List<VBAAttributes> getAttributes() {
+	public List<VBAAttribute> getAttributes() {
 		return attributes;
 	}
 
 	public String writeClass() {
 		String header = 
-				"Attribute VB_Name = \"" + getName() + "\"\r\n"
+				"\nAttribute VB_Name = \"" + getName() + "\"\r\n"
 				+ "Attribute VB_GlobalNameSpace = False\r\n"
 				+ "Attribute VB_Creatable = False\r\n"
 				+ "Attribute VB_PredeclaredId = False\r\n"
@@ -52,9 +52,13 @@ public class VBAClass {
 		statements.put("attrsAsType", attrs);
 		
 		String gettersAndSetters = getAttributes().stream()
-				.map(attr -> (attr.getAttrGetter() + attr.getAttrSetter()))
+				.map(attr -> (attr.getAttrGetter() + attr.getAttrSetter() + attr.getAttrGetterJsonName()))
 				.reduce((attr1, attr2) -> attr1 + attr2).get();
-		statements.put("gettersAndSetters", gettersAndSetters);		
+		statements.put("gettersAndSetters", gettersAndSetters);	
+		
+		statements.put("toString", getToString());
+		
+		statements.put("assemblyWith", getAssemblyWith());
 
 		StringBuffer classAssembler = new StringBuffer();
 		classAssembler.append(statements.get("header"));
@@ -64,8 +68,69 @@ public class VBAClass {
 		classAssembler.append(statements.get("mainTypeEnd"));
 		classAssembler.append(statements.get("privateThis"));
 		classAssembler.append(statements.get("gettersAndSetters"));
+		classAssembler.append(statements.get("assemblyWith"));
+		classAssembler.append(statements.get("toString"));
 
 		return classAssembler.toString().trim();
+	}
+
+	private String getAssemblyWith() {
+		String assemblyWithBegin = "Public Sub AssemblyWith(Data As Dictionary, PrefixOfKey As String)\n";
+		
+		String attrAssemblyNotDouble = this.attributes.stream()
+				.filter(attr -> !attr.getType().equalsIgnoreCase("Double"))
+				.map(attr -> VBALangUtils.indent() + attr.getName() + " = Data.Item(PrefixOfKey & " + attr.getName() + "JsonName)\n")
+				.reduce((attr1, attr2) -> attr1 + attr2)
+				.orElse("");
+
+		String attrAssemblyDouble = this.attributes.stream()
+				.filter(attr -> attr.getType().equalsIgnoreCase("Double"))
+				.map(attr -> assemblyWithAsDouble(attr.getName()))
+				.reduce((attr1, attr2) -> attr1 + attr2)
+				.orElse("");
+
+		String assemblyWithEnd = "End Sub\n";
+		
+		String assemblyFn = assemblyWithBegin + attrAssemblyNotDouble + attrAssemblyDouble + assemblyWithEnd;
+		return assemblyFn;
+	}
+	
+	private String assemblyWithAsDouble(String attrName) {
+		String assembly = "\n";
+						
+		var attrNameAsString = attrName + "String";
+		assembly += VBALangUtils.indent() + "Dim " + attrNameAsString + " As String\n";
+		assembly += VBALangUtils.indent() + attrNameAsString  + " = Data.Item(PrefixOfKey & " + attrName + "JsonName)\n";
+		assembly += VBALangUtils.indent() + attrNameAsString  + " = Replace(" + attrNameAsString + ", \".\", \",\")\n";
+		assembly += VBALangUtils.indent() + attrName  + " = CDbl(" + attrNameAsString + ")\n";
+		
+		return assembly;
+	}
+
+	private String getToString() {
+		String toStringBegin = 
+				"Public Function ToString() As String\n"
+				+ VBALangUtils.indent() 
+				+ "Dim str As String\n\n"
+				+ VBALangUtils.indent()
+				+ "str = \"\"\n";
+		
+		String attrToString = this.attributes.stream()
+			.map(attr -> VBALangUtils.indent() + "str = str & \"" + attr.getName() + ":\" & " + attr.getName() + " & vbCr\n")
+			.reduce((attr1, attr2) -> attr1 + attr2)
+			.get();
+		
+		String toStringEnd =				
+				"\n" 
+				+ VBALangUtils.indent() 
+				+ "str = ReformatCSVString(str)\n"
+				+ VBALangUtils.indent()
+				+ "ToString = str\n"
+				+ "End Function\n";
+		
+		String toStringFn = toStringBegin + attrToString + toStringEnd;
+	
+		return toStringFn;
 	}
 
 	@Override

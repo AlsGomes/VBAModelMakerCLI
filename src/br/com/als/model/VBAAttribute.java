@@ -2,20 +2,23 @@ package br.com.als.model;
 
 import br.com.als.vba.util.VBALangUtils;
 
-public class VBAAttributes {
+public class VBAAttribute {
 	private String name;
 	private String type;
+	private String jsonName;
 
 	private String attrAsType;
 	private String attrGetter;
 	private String attrSetter;
+	private String attrGetterJsonName;
 
-	public VBAAttributes() {
+	public VBAAttribute() {
 	}
 
-	public VBAAttributes(String name, String type) {
+	public VBAAttribute(String name, String type, String jsonName) {
 		setName(name);
 		setType(type);
+		setJsonName(jsonName);
 	}
 
 	public String getName() {
@@ -40,6 +43,15 @@ public class VBAAttributes {
 		createAttrSetter();
 	}
 
+	public String getJsonName() {
+		return jsonName;
+	}
+
+	public void setJsonName(String jsonName) {
+		this.jsonName = jsonName;
+		createAttrGetterJsonName();
+	}
+
 	public String getAttrAsType() {
 		return attrAsType;
 	}
@@ -50,6 +62,10 @@ public class VBAAttributes {
 
 	public String getAttrSetter() {
 		return attrSetter;
+	}
+
+	public String getAttrGetterJsonName() {
+		return attrGetterJsonName;
 	}
 
 	private void createAttrType() {
@@ -85,6 +101,20 @@ public class VBAAttributes {
 		this.attrSetter = sb.toString();
 	}
 
+	private void createAttrGetterJsonName() {
+		String attrGetterBegin = "Property Get " + getName() + "JsonName() As String\n";
+		String equals = getName() + "JsonName = " + "\"" + getJsonName() + "\"" + "\n";
+		String attrGetterEnd = "End Property\n";
+
+		StringBuffer sb = new StringBuffer();
+		sb.append(attrGetterBegin);
+		sb.append(VBALangUtils.indent());
+		sb.append(equals);
+		sb.append(attrGetterEnd);
+
+		this.attrGetterJsonName = sb.toString();
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -101,7 +131,7 @@ public class VBAAttributes {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		VBAAttributes other = (VBAAttributes) obj;
+		VBAAttribute other = (VBAAttribute) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;

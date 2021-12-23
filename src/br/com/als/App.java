@@ -1,70 +1,72 @@
 package br.com.als;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Scanner;
 
-import br.com.als.model.VBAAttributes;
+import br.com.als.model.VBAAttribute;
 import br.com.als.model.VBAClass;
 
 public class App {
 
+	private static final Scanner SCANNER = new Scanner(System.in);
+
 	public static void main(String[] args) {
 
-		Scanner sc = new Scanner(System.in);
+		var vbaClass = new VBAClass(getClassName());
 
-		System.out.print("Digite o nome da classe que deseja criar: ");
-		String className = sc.nextLine();
+		exitClassAssembly();
+		exitSystem();
 
-		var vbaClass = new VBAClass(className);
-
-		System.out.println("Caso deseje encerrar a criação, escreva 'exit'");
 		while (true) {
-			System.out.print(String.format(
-					"Escreva o nome do atributo que será incluso na classe %s, seguido por um espaço e o seu tipo: ",
-					className));
-			String attributeNameAndType = sc.nextLine();
+			String attrNameAndTypeAndJsonName = attributeEntry(vbaClass.getName());
 
-			if ("exit".equalsIgnoreCase(attributeNameAndType)) {
+			if ("exit".equalsIgnoreCase(attrNameAndTypeAndJsonName)) {
 				break;
 			}
 
-			String[] values = attributeNameAndType.split(" ");
+			if ("stop".equalsIgnoreCase(attrNameAndTypeAndJsonName)) {
+				System.exit(0);
+			}
+
+			String[] values = attrNameAndTypeAndJsonName.trim().split(" ");
 			String attrName = values[0];
 			String attrType = values[1];
 
-			vbaClass.getAttributes().add(new VBAAttributes(attrName, attrType));
+			String attrJsonName = "";
+			if (values.length == 3)
+				attrJsonName = values[2];
+
+			var vbaAttribute = new VBAAttribute();
+			vbaAttribute.setName(attrName);
+			vbaAttribute.setType(attrType);
+			if (!attrJsonName.isBlank())
+				vbaAttribute.setJsonName(attrJsonName);
+
+			vbaClass.getAttributes().add(vbaAttribute);
 		}
-
-		System.out.println("Deseja exportar o arquivo ou somente exibir? exportar/exibir");
-		String res = sc.nextLine();
 		
-		if("exibir".equalsIgnoreCase(res)) {
-			System.out.println(vbaClass.writeClass());
-			sc.close();
-			return;
-		}
-		
-		System.out.println(
-				String.format("Escreva o caminho da pasta em que deseja salvar o arquivo %s.cls", vbaClass.getName()));
-		String outPath = sc.nextLine();
-		outPath += "\\" + vbaClass.getName() + ".cls";
-
-		writeFile(outPath, vbaClass.writeClass());
-
-		sc.close();
+		System.out.println(vbaClass.writeClass());
+		SCANNER.close();
 	}
 
-	private static void writeFile(String outPath, String content) {
-		try (BufferedWriter bw = new BufferedWriter(new FileWriter(outPath))) {
-
-			bw.write(content);
-			System.out.println(outPath + " CREATED!");
-
-		} catch (IOException e) {
-			System.out.println("Erro ao escrever o arquivo: " + e.getMessage());
-		}
+	private static String attributeEntry(String className) {
+		System.out.print(String.format(
+				"Escreva o nome do atributo que será incluso na classe %s, seguido por um espaço, o seu tipo, espaço e o nome do atributo em JSON (opcional): ",
+				className));
+		String attributeNameAndTypeAndJsonName = SCANNER.nextLine();
+		return attributeNameAndTypeAndJsonName;
 	}
 
+	private static void exitSystem() {
+		System.out.println("Para encerrar o programa, escreva 'stop'");
+	}
+
+	private static String getClassName() {
+		System.out.print("Digite o nome da classe que deseja criar: ");
+		String className = SCANNER.nextLine();
+		return className;
+	}
+
+	private static void exitClassAssembly() {
+		System.out.println("Caso deseje encerrar a criação da classe, escreva 'exit'");
+	}
 }
