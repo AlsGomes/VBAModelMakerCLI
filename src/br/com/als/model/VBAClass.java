@@ -77,8 +77,8 @@ public class VBAClass {
 	private String getAssemblyWith() {
 		String assemblyWithBegin = "Public Sub AssemblyWith(Data As Dictionary, PrefixOfKey As String)\n";
 		
-		String attrAssemblyNotDouble = this.attributes.stream()
-				.filter(attr -> !attr.getType().equalsIgnoreCase("Double"))
+		String attrAssemblyNotDoubleAndNotString = this.attributes.stream()
+				.filter(attr -> (!attr.getType().equalsIgnoreCase("Double") && !attr.getType().equalsIgnoreCase("String")))
 				.map(attr -> VBALangUtils.indent() + attr.getName() + " = Data.Item(PrefixOfKey & " + attr.getName() + "JsonName)\n")
 				.reduce((attr1, attr2) -> attr1 + attr2)
 				.orElse("");
@@ -88,10 +88,17 @@ public class VBAClass {
 				.map(attr -> assemblyWithAsDouble(attr.getName()))
 				.reduce((attr1, attr2) -> attr1 + attr2)
 				.orElse("");
+		
+		String attrAssemblyString = this.attributes.stream()
+				.filter(attr -> attr.getType().equalsIgnoreCase("String"))
+				.map(attr -> VBALangUtils.indent() + attr.getName() + " = ReformatString(Data.Item(PrefixOfKey & " + attr.getName() + "JsonName))\n")
+				.reduce((attr1, attr2) -> attr1 + attr2)
+				.orElse("");	
+		attrAssemblyString = "\n" + attrAssemblyString;
 
 		String assemblyWithEnd = "End Sub\n";
 		
-		String assemblyFn = assemblyWithBegin + attrAssemblyNotDouble + attrAssemblyDouble + assemblyWithEnd;
+		String assemblyFn = assemblyWithBegin + attrAssemblyNotDoubleAndNotString + attrAssemblyString + attrAssemblyDouble + assemblyWithEnd;
 		return assemblyFn;
 	}
 	
@@ -123,7 +130,7 @@ public class VBAClass {
 		String toStringEnd =				
 				"\n" 
 				+ VBALangUtils.indent() 
-				+ "str = ReformatCSVString(str)\n"
+				+ "str = ReformatString(str)\n"
 				+ VBALangUtils.indent()
 				+ "ToString = str\n"
 				+ "End Function\n";

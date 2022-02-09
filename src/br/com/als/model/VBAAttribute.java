@@ -142,6 +142,7 @@ public class VBAAttribute {
 
 	@Override
 	public String toString() {
-		return "VBAAttributes [name=" + name + ", type=" + type + "]";
+		return "VBAAttribute [name=" + name + ", type=" + type + ", jsonName=" + jsonName + "]";
 	}
+
 }
